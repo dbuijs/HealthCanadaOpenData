@@ -4,8 +4,8 @@ cache_loading: TRUE
 recursive_loading: FALSE
 munging: TRUE
 logging: FALSE
-load_libraries: FALSE
-libraries: reshape, plyr, ggplot2, stringr, lubridate
-as_factors: TRUE
-data_tables: FALSE
+load_libraries: TRUE
+libraries: reshape, plyr, ggplot2, stringr, lubridate, dplyr, data.tables, rvest
+as_factors: FALSE
+data_tables: TRUE
 attach_internal_libraries: FALSE

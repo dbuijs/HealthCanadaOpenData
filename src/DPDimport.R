@@ -14,21 +14,21 @@ library(digest)
 #Get the DPD extract date
 dpdcoverlink <- "http://www.hc-sc.gc.ca/dhp-mps/prodpharma/databasdon/dpd_bdpp_data_extract-eng.php"
 dpdextractdate <- html_session(dpdcoverlink) %>%
-  html_nodes("td:contains('allfiles.zip')+ td") %>%
+  html_nodes('td:contains("allfiles.zip")+ td') %>%
   html_text() %>%
   parse_date_time("Ymd") %>%
   format("%Y-%m-%d")
 
 #Download and extract the DPD extract
 dpdurl <- "http://www.hc-sc.gc.ca/dhp-mps/alt_formats/zip/prodpharma/databasdon/allfiles.zip"
-if(!(file.exists("../dpd"))) dir.create("../dpd")
-download.file(dpdurl, "../dpd/dpdallfiles.zip")
-unzip("../dpd/dpdallfiles.zip", exdir = "../dpd")
+if(!(file.exists("~/data/dpd"))) dir.create("~/data/dpd")
+download.file(dpdurl, "~/data/dpd/dpdallfiles.zip")
+unzip("~/data/dpd/dpdallfiles.zip", exdir = "~/data/dpd")
 
 #Download and extract the DPD inactives extract
 dpdiaurl <- "http://www.hc-sc.gc.ca/dhp-mps/alt_formats/zip/prodpharma/databasdon/allfiles_ia.zip"
-download.file(dpdiaurl, "../dpd/dpdallfiles_ia.zip")
-unzip("../dpd/dpdallfiles_ia.zip", exdir = "../dpd")
+download.file(dpdiaurl, "~/data/dpd/dpdallfiles_ia.zip")
+unzip("~/data/dpd/dpdallfiles_ia.zip", exdir = "~/data/dpd")
 
 
 # DPD Variable Names
@@ -42,23 +42,23 @@ dpdvar <- list()
 for(i in dpdtablenames){dpdcss <- paste0("table:contains('", i, "') td:nth-child(1)")
                         dpdname <- i %>%
                           tolower() %>%
-                          str_extract(perl("(?<=qrym_).*$")) %>%
+                          str_extract(regex("(?<=qrym_).*$")) %>%
                           paste0("dpd_", .)
                         dpdvar[[dpdname]] <- dpdreadme %>% html_nodes(dpdcss) %>% html_text()}
 
-dpdfiles <- list.files("../dpd", pattern = ".*txt")
+dpdfiles <- list.files("~/data/dpd", pattern = ".*txt")
 dpdiafiles <- dpdfiles[grepl("_ia.txt|inactive", dpdfiles)]
 dpdiafiles <- dpdiafiles[!grepl("inactive", dpdiafiles)]
 dpdfiles <- dpdfiles[!grepl("_ia.txt|inactive", dpdfiles)]
 
-for(i in dpdfiles){dpdnameroot <- i %>% tolower() %>% str_extract(perl(".*(?=\\.txt$)"))
+for(i in dpdfiles){dpdnameroot <- i %>% tolower() %>% str_extract(regex(".*(?=\\.txt$)"))
                    varname <- paste0("dpd_", dpdnameroot)
-                   dpdfile <- paste0("../dpd/", i)
+                   dpdfile <- paste0("~/data/dpd/", i)
                    assign(varname, fread(dpdfile, header=FALSE))}
 
-for(i in dpdiafiles){dpdnameroot <- i %>% tolower() %>% str_extract(perl(".*(?=\\.txt$)"))
+for(i in dpdiafiles){dpdnameroot <- i %>% tolower() %>% str_extract(regex(".*(?=\\.txt$)"))
                    varname <- paste0("dpd_", dpdnameroot)
-                   dpdiafile <- paste0("../dpd/", i)
+                   dpdiafile <- paste0("~/data/dpd/", i)
                    assign(varname, fread(dpdiafile, header=FALSE))}
 
 #Variable names

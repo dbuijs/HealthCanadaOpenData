@@ -1,4 +1,4 @@
-#Daniel Buijs, dbuijs@gmail.com
+#Daniel Buijs, daniel.buijs@hc-sc.gc.ca
 #This script downloads and imports the Health Canada NOC Database
 
 library(rvest)
@@ -16,16 +16,16 @@ nocdbcoverlink <- "http://www.hc-sc.gc.ca/dhp-mps/prodpharma/notices-avis/noc-ac
 nocdbextractdate <- html_session(nocdbcoverlink) %>%
   html_nodes("h2:contains('Last updated')") %>%
   html_text() %>%
-  str_extract(perl("(?<=Last updated:).*$")) %>%
+  str_extract(regex("(?<=Last updated:).*$")) %>%
   parse_date_time("Bdy") %>%
   format("%Y-%m-%d")
 
 #Download and extract the NOC db extract
 nocdburl <- "http://www.hc-sc.gc.ca/dhp-mps/alt_formats/txt/prodpharma/notices-avis/noc-acc/nocfiles.zip"
-if(!(file.exists("../nocdb"))) dir.create("../nocdb")
-nocfile <- paste0("../nocdb/",basename(nocdburl))
+if(!(file.exists("../data/nocdb"))) dir.create("../data/nocdb")
+nocfile <- paste0("../data/nocdb/",basename(nocdburl))
 download.file(nocdburl, nocfile)
-unzip(nocfile, exdir = "../nocdb")
+unzip(nocfile, exdir = "../data/nocdb")
 
 
 # NOC Variable Names
@@ -39,18 +39,18 @@ nocvar <- list()
 for(i in noctablenames){noccss <- paste0("table:contains('", i, "') td:nth-child(1)")
                         nocname <- i %>%
                                    tolower() %>%
-                                   str_extract(perl("(?<=qry_).*$")) %>%
+                                   str_extract(regex("(?<=qry_).*$")) %>%
                                    paste0("noc_", .)
                         nocvar[[nocname]] <- nocreadme %>% html_nodes(noccss) %>% html_text()}
 
-nocfiles <- list.files("../nocdb", pattern = "NOC|noc.*txt")
+nocfiles <- list.files("../data/nocdb", pattern = "NOC|noc.*txt")
 
-# for(i in nocfiles){varname <- i %>% tolower() %>% str_extract(perl(".*(?=\\.txt$)"))
-#                    nocfilepath <- paste0("../nocdb/", i)
+# for(i in nocfiles){varname <- i %>% tolower() %>% str_extract(regex(".*(?=\\.txt$)"))
+#                    nocfilepath <- paste0("../data/nocdb/", i)
 #                    assign(varname, fread(nocfilepath, header=FALSE))}
 # As of May 2015, NOC extract includes a summary row at the bottom
-for(i in nocfiles){varname <- i %>% tolower() %>% str_extract(perl(".*(?=\\.txt$)"))
-                   nocfilepath <- paste0("../nocdb/", i)
+for(i in nocfiles){varname <- i %>% tolower() %>% str_extract(regex(".*(?=\\.txt$)"))
+                   nocfilepath <- paste0("../data/nocdb/", i)
                    assign(varname, read.csv(nocfilepath, 
                                             header=FALSE, 
                                             stringsAsFactors = FALSE, 

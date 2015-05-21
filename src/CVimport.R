@@ -1,21 +1,19 @@
 #Daniel Buijs, daniel.buijs@hc-sc.gc.ca
 #This script downloads and imports the Canada Vigilance Database from Health Canada
-#Returns data.tables with the cv_ prefix
+#Returns data.tables with the cv_ prefix, and cvextractdate with the date of the extract
+
 library(rvest)
-library(XML)
-library(httr)
 library(lubridate)
 library(stringr)
 library(magrittr)
 library(dplyr)
 library(data.table)
-library(digest)
 
 cvzipurl <- "http://www.hc-sc.gc.ca/dhp-mps/alt_formats/zip/medeff/databasdon/extract_extrait.zip"
 cvlanding <- "http://www.hc-sc.gc.ca/dhp-mps/medeff/databasdon/extract_extrait-eng.php"
 cvreadmeurl <- "http://www.hc-sc.gc.ca/dhp-mps/medeff/databasdon/structure-eng.php"
 
-#Get the DPD extract date
+#Get the CV extract date
 
 cvextractdate <- html_session(cvlanding) %>%
   html_nodes('p:contains("time period:")') %>%
@@ -24,20 +22,23 @@ cvextractdate <- html_session(cvlanding) %>%
   parse_date_time("Ymd") %>%
   format("%Y-%m-%d")
 
-#Download and extract the CV extract
+#Download and unzip the CV extract
 
 if(!(file.exists("../data/cv"))) dir.create("../data/cv")
 download.file(cvzipurl, "../data/cv/cvextract.zip")
 unzip("../data/cv/cvextract.zip", exdir = "../data/cv")
 
 # CV Variable Names
-# libraries XML, httr, rvest, magrittr, dply and stringr loaded in project config
+# Grab the readme page
 cvreadme <- html_session(cvreadmeurl)
+# Extract the table names
 cvtablenames <- cvreadme %>% 
   html_nodes("h2:contains('.txt')") %>% 
   html_text() %>% 
   str_trim()
+# Grab the html tables with the variables
 cvtables <- html_table(cvreadme)
+# Put the table names and variables into a list
 cvvar <- list()
 for(i in 1:length(cvtablenames)){
                         cvname <- cvtablenames[i] %>%
@@ -46,9 +47,9 @@ for(i in 1:length(cvtablenames)){
                           ifelse(str_detect(., "_lx$"), str_extract(., "^.*(?=_lx)"), .) %>%
                           paste0("cv_", .)
                         cvvar[[cvname]] <- cvtables[[i]][,2]}
-
+# Grab the file names
 cvfiles <- list.files("../data/cv", pattern = ".*txt")
-
+# Import the files
 for(i in cvfiles){varname <- i %>% 
                     str_extract(regex(".*(?=\\.txt$)")) %>%
                     ifelse(str_detect(., "_lx$"), str_extract(., "^.*(?=_lx)"), .) %>%
@@ -70,7 +71,7 @@ for(i in cvfiles){varname <- i %>%
 cvvar[["cv_reports"]] <-cvvar[["cv_reports"]][-13]
 cvvar[["cv_reports"]] <- c(cvvar[["cv_reports"]][1:15], "AGE_GROUP_ENG", "AGE_GROUP_FR", cvvar[["cv_reports"]][16:length(cvvar[["cv_reports"]])])
 
-#Fudge for cv_reactions
+#Fudge for cv_reactions, extra columns that aren't in the data dictionary. guessing they are coding
 cvvar[["cv_reactions"]] <- c(cvvar[["cv_reactions"]][1:5], "PT_NAME_CODE", cvvar[["cv_reactions"]][6:7], "SOC_NAME_CODE", cvvar[["cv_reactions"]][8:10])
 
 #Variable names

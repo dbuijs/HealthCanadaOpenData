@@ -79,6 +79,18 @@ cvtables <- sort(ls(pattern = "cv_"))
 cvvarorder <- sort(names(cvvar))
 mapply(function(x, y) setnames(get(x), cvvar[[y]]), cvtables, cvvarorder)
 
+#Add 4-digit years. R assumes that 2-digits years are 00-68 = 2000-2068 and 69-99 = 1969-1999
+#The following code fixes this by adding new columns with 4 digit years
+cv_reports %<>%
+  mutate(newdate = dmy(DATRECEIVED),
+         DATRECEIVEDyyyy = ifelse(year(newdate) > 2015,
+                                  paste(subtract((year(newdate)), 100), format(newdate, "%m-%d"), sep = "-"),
+                                  as.character(newdate)),
+         newdate = dmy(DATINTRECEIVED),
+         DATINTRECEIVEDyyyy = ifelse(year(newdate) > 2015,
+                                     paste(subtract((year(newdate)), 100), format(newdate, "%m-%d"), sep = "-"),
+                                     as.character(newdate))) %>%
+  select(-newdate)
  
 # Clean up transients
 rm(list = c("cvfilepath", 

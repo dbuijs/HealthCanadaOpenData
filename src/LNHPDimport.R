@@ -66,6 +66,15 @@ for(i in lnhpdfiles){varname <- i %>% tolower() %>% str_extract(regex(".*(?=\\.t
 #Variable names
 for(i in ls(pattern = "nhp_")){setnames(get(i), lnhpdvar[[i]])}
 
+#Add 4-digit years. R assumes that 2-digits years are 00-68 = 2000-2068 and 69-99 = 1969-1999
+#The following code fixes this by adding new columns with 4 digit years
+nhp_products %<>%
+  mutate(newdate = dmy(licence_date),
+        licence_dateyyyy = ifelse(year(newdate) > 2015,
+                                  paste(subtract((year(newdate)), 100), format(newdate, "%m-%d"), sep = "-"),
+                                  as.character(newdate))) %>%
+  select(-newdate)
+
 #Clean up transients
 rm(list= c("lnhpdcoverlink",
            "lnhpdcss",

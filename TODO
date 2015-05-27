@@ -1,14 +1,14 @@
 Data sources:
 
-DPD
-NOC db
-SBDs
 RDSes
 SUR
 PMs
-Patent Register
-LNHPD
 SSRs
 PM updates list
 Common Drug Review
 Healthy Canadians
+
+Validation and error handling
+Archive and SHA256 hash
+Deduplicate/coding
+Imputation/missing values

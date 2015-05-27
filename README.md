@@ -9,3 +9,4 @@ Currently the `src` directory has import scripts for the following datasets:
 * Summary Basis of Decisions
 * The Patent Register
 * Canada Vigilance
+* The Licenced Natural Health Products Database

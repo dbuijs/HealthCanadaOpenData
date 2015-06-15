@@ -55,12 +55,14 @@ dpdfiles <- dpdfiles[!grepl("_ia.txt|inactive", dpdfiles)]
 for(i in dpdfiles){dpdnameroot <- i %>% tolower() %>% str_extract(regex(".*(?=\\.txt$)"))
                    varname <- paste0("dpd_", dpdnameroot)
                    dpdfile <- paste0("../data/dpd/", i)
-                   assign(varname, fread(dpdfile, header=FALSE))}
+                   predpdfile <- paste("iconv -f ISO-8859-1 -t UTF-8", dpdfile, sep = " ")
+                   assign(varname, fread(predpdfile, header=FALSE))}
 
 for(i in dpdiafiles){dpdnameroot <- i %>% tolower() %>% str_extract(regex(".*(?=\\.txt$)"))
                    varname <- paste0("dpd_", dpdnameroot)
                    dpdiafile <- paste0("../data/dpd/", i)
-                   assign(varname, fread(dpdiafile, header=FALSE))}
+                   predpdiafile <- paste("iconv -f ISO-8859-1 -t UTF-8", dpdiafile, sep = " ")
+                   assign(varname, fread(predpdiafile, header=FALSE))}
 
 #Variable names
 dpdtables <- sort(ls(pattern = "dpd_"))

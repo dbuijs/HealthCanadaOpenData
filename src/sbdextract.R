@@ -23,16 +23,16 @@ sbdlinksdrug <- html_session("http://www.hc-sc.gc.ca/dhp-mps/prodpharma/sbd-smd/
 sbdlinksdrugposted <- html_session("http://www.hc-sc.gc.ca/dhp-mps/prodpharma/sbd-smd/drug-med/index-eng.php") %>%
   html_nodes(".date li:contains('Summary')") %>%
   html_text() %>%
-  str_extract(perl("(?<=\\[)\\d{4}-\\d{2}-\\d{2}"))
+  str_extract(regex("(?<=\\[)\\d{4}-\\d{2}-\\d{2}"))
 
 #Build the SBD drugs dataframe
 #The Perl regexes extract the drug name and year published
 #Uses the standardized naming: sbd_smd_year_drug_control#-eng.php
 #Should probably add some error-checking code here
 sbddrugs <- data.frame(drug=sbdlinksdrug %>%
-                         str_extract(perl("(?<=sbd_smd_\\d{4}_)\\w+(?=[_-]\\d)")),
+                         str_extract(regex("(?<=sbd_smd_\\d{4}_)\\w+(?=[_-]\\d)")),
                        year=sbdlinksdrug %>%
-                         str_extract(perl("(?<=sbd_smd_)\\d{4}(?=[_-])")),
+                         str_extract(regex("(?<=sbd_smd_)\\d{4}(?=[_-])")),
                        url=sbdlinksdrug, stringsAsFactors = FALSE,
                        sbd_date_posted = sbdlinksdrugposted)
 
@@ -48,16 +48,16 @@ sbdlinksdevice <- html_session("http://www.hc-sc.gc.ca/dhp-mps/prodpharma/sbd-sm
 sbdlinksdevposted <- html_session("http://www.hc-sc.gc.ca/dhp-mps/prodpharma/sbd-smd/md-im/index-eng.php") %>%
   html_nodes(".date li:contains('Summary')") %>%
   html_text() %>%
-  str_extract(perl("(?<=\\[)\\d{4}-\\d{2}-\\d{2}"))
+  str_extract(regex("(?<=\\[)\\d{4}-\\d{2}-\\d{2}"))
 
 #Build the SBD drugs dataframe
 #The Perl regexes extract the drug name and year published
 #Uses the standardized naming: sbd_smd_year_drug_control#-eng.php
 #Should probably add some error-checking code here
 sbddevices <- data.frame(device=sbdlinksdevice %>%
-                         str_extract(perl("(?<=sbd_smd_\\d{4}_)\\w+(?=[_-]\\d{5}?(-eng)?)")),
+                         str_extract(regex("(?<=sbd_smd_\\d{4}_)\\w+(?=[_-]\\d{5}?(-eng)?)")),
                        year=sbdlinksdevice %>%
-                         str_extract(perl("(?<=sbd_smd_)\\d{4}(?=[_-])")),
+                         str_extract(regex("(?<=sbd_smd_)\\d{4}(?=[_-])")),
                        url=sbdlinksdevice, stringsAsFactors = FALSE,
                        sbd_date_posted = sbdlinksdevposted)
 
@@ -72,12 +72,27 @@ sbddrugs <- cbind(sbddrugs, sbdtext, stringsAsFactors = FALSE)
 sbddrugs$prodsubinfo <- grepl("Product and Submission Information", sbddrugs$sbdtext, ignore.case = TRUE)
 sbddrugs$q1what <- grepl("What was approved?", sbddrugs$sbdtext)
 #Review Bureau
-sbddrugs$contact <- str_extract(sbddrugs$sbdtext, perl("(?<=Contact: ).*(?=\\n)"))
+sbddrugs$contact <- sapply(sbdhtml, function(x) x %>% 
+                                                html_nodes("p:contains('Contact:')") %>% 
+                                                html_text() %>%
+                                                str_replace_all("\\s{2,}", " ") %>%
+                                                str_extract(regex("(?<=^Contact:).*")) %>%
+                                                str_trim() %>%
+                                                {ifelse(length(.) == 0, NA, .)})
+
+sbddrugs %<>% mutate(bureau = ifelse(grepl("Biologic|Biotherapeutic", contact), "ORA", NA),
+                     bureau = ifelse(grepl("Metabolism|BMORS", contact), "BMORS", bureau),
+                     bureau = ifelse(grepl("Cardiology|BCANS", contact), "BCANS", bureau),
+                     bureau = ifelse(grepl("Gastro|BGIVD", contact), "BGIVD", bureau))
+
+#Fudge for Menveo
+sbddrugs[sbddrugs$drug == "menveo", "bureau"] <- "ORA"
+
 #Find numbers that look like DINs
-sbddrugs$dinraw <- str_extract_all(sbddrugs$sbdtext, perl("0\\d{7}")) %>% sapply(unique) %>% paste(sep=", ")
+sbddrugs$dinraw <- str_extract_all(sbddrugs$sbdtext, regex("0\\d{7}")) %>% sapply(unique) %>% paste(sep=", ")
 
 #temporary fudge for Velcade becuase the SBD has no leading zero
-sbddrugs[sbddrugs$drug == "velcade", "dinraw"] <- str_extract(sbddrugs[sbddrugs$drug == "velcade", "sbdtext"], perl("(?<=DIN: )\\d*")) %>%
+sbddrugs[sbddrugs$drug == "velcade", "dinraw"] <- str_extract(sbddrugs[sbddrugs$drug == "velcade", "sbdtext"], regex("(?<=DIN: )\\d*")) %>%
                                                   as.numeric() %>%
                                                   sprintf("0%d8", .)
 
@@ -87,17 +102,17 @@ sbddevtext <- sapply(sbddevhtml, function(x) x %>% html_nodes(".center") %>% htm
 sbddevices <- cbind(sbddevices, sbddevtext, stringsAsFactors = FALSE)
 sbddevices$prodsubinfo <- grepl("Product and Submission Information", sbddevices$sbddevtext, ignore.case = TRUE)
 sbddevices$q1what <- grepl("What was approved?", sbddevices$sbddevtext)
-sbddevices$contact <- str_extract(sbddevices$sbddevtext, perl("(?<=Contact: ).*(?=\\n)"))
-sbddevices$class <- str_extract(sbddevices$sbddevtext, perl("Class.{1,6}(?=\\s)"))
+sbddevices$contact <- str_extract(sbddevices$sbddevtext, regex("(?<=Contact: ).*(?=\\n)"))
+sbddevices$class <- str_extract(sbddevices$sbddevtext, regex("Class.{1,6}(?=\\s)"))
 #sbddrugs$dinraw <- str_extract_all(sbddrugs$sbdtext, perl("0\\d{6}")) %>% sapply(unique) %>% paste(sep=", ")
 
 #NOC date
 sbddrugs <- sbddrugs %>%
-            mutate(date_noc = str_extract(sbdtext, perl("(?<=On ).*(?=Health  ?Canada)")) %>%
+            mutate(date_noc = str_extract(sbdtext, regex("(?<=On ).*(?=Health  ?Canada)")) %>%
                      #iconv("UTF-8", "ISO8859-1") %>% Need this line for Windows systems
                      parse_date_time("Bdy") %>%
                      format("%Y-%m-%d"),
-                   firstdin = str_extract(dinraw, perl("0\\d{7}")) %>% 
+                   firstdin = str_extract(dinraw, regex("0\\d{7}")) %>% 
                               as.numeric %>%
                               sprintf("0%d", .))
 sbddrugs$firstdin[sbddrugs$firstdin == "0NA"] <- NA

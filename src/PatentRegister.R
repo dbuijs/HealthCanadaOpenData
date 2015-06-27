@@ -1,4 +1,4 @@
-#Daniel Buijs, daniel.buijs@hc-sc.gc.ca
+#Daniel Buijs, dbuijs@gmail.com
 #This script downloads and imports the Health Canada Patent Register
 
 library(rvest)

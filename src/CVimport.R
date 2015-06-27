@@ -1,4 +1,4 @@
-#Daniel Buijs, daniel.buijs@hc-sc.gc.ca
+#Daniel Buijs, dbuijs@gmail.com
 #This script downloads and imports the Canada Vigilance Database from Health Canada
 #Returns data.tables with the cv_ prefix, and cvextractdate with the date of the extract
 

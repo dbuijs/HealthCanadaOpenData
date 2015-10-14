@@ -10,7 +10,7 @@ library(magrittr)
 library(dplyr)
 library(data.table)
 library(digest)
-
+library(Hmisc)
 
 #Get the DPD extract date
 dpdcoverlink <- "http://www.hc-sc.gc.ca/dhp-mps/prodpharma/databasdon/dpd_bdpp_data_extract-eng.php"
@@ -31,6 +31,20 @@ dpdiaurl <- "http://www.hc-sc.gc.ca/dhp-mps/alt_formats/zip/prodpharma/databasdo
 download.file(dpdiaurl, "../data/dpd/dpdallfiles_ia.zip")
 unzip("../data/dpd/dpdallfiles_ia.zip", exdir = "../data/dpd")
 
+#Download and extract the DPD approved extract
+dpdapurl <- "http://www.hc-sc.gc.ca/dhp-mps/alt_formats/zip/prodpharma/databasdon/allfiles_ap.zip"
+download.file(dpdapurl, "../data/dpd/dpdallfiles_ap.zip")
+unzip("../data/dpd/dpdallfiles_ap.zip", exdir = "../data/dpd")
+
+# Convert all to UTF-8
+sys('for a in $(find ../data/dpd -name "*.txt"); do iconv -f iso-8859-1 -t utf-8 <"$a" >"$a".utf8; done')
+
+# Strip leading and trailing whitespace on each line with perl:  s/^\s+|\s+$//g
+sys('for a in $(find ../data/dpd -name "*.txt.utf8"); do perl -lape \'s/^\\s+|\\s+$//g\' "$a" > "$a".ws1; done')
+
+# perl to remove \r\n that is not preceded by a quote: perl -pe 's/(?<!\")\r\n//g'
+# sys('perl -pe \'s/(?<!\")\\r\\n//g\' ../data/dpd/ther.txt > ../data/dpd/ther.fixed.txt')
+
 
 # DPD Variable Names
 # libraries XML, httr, rvest, magrittr, dply and stringr loaded in project config
@@ -47,29 +61,36 @@ for(i in dpdtablenames){dpdcss <- paste0("table:contains('", i, "') td:nth-child
                           paste0("dpd_", .)
                         dpdvar[[dpdname]] <- dpdreadme %>% html_nodes(dpdcss) %>% html_text()}
 
-dpdfiles <- list.files("../data/dpd", pattern = ".*txt")
+dpdfiles <- list.files("../data/dpd", pattern = ".*txt.utf8.ws1")
 dpdiafiles <- dpdfiles[grepl("_ia.txt|inactive", dpdfiles)]
+dpdapfiles <- dpdfiles[grepl("_ap.txt", dpdfiles)]
 dpdiafiles <- dpdiafiles[!grepl("inactive", dpdiafiles)]
-dpdfiles <- dpdfiles[!grepl("_ia.txt|inactive", dpdfiles)]
+dpdfiles <- dpdfiles[!dpdfiles %in% c(dpdiafiles, dpdapfiles, "inactive.txt.utf8.ws1")]
 
-for(i in dpdfiles){dpdnameroot <- i %>% tolower() %>% str_extract(regex(".*(?=\\.txt$)"))
+
+for(i in dpdfiles){dpdnameroot <- i %>% tolower() %>% str_extract(regex(".*(?=\\.txt.utf8.ws1$)"))
                    varname <- paste0("dpd_", dpdnameroot)
                    dpdfile <- paste0("../data/dpd/", i)
-                   predpdfile <- paste("iconv -f ISO-8859-1 -t UTF-8", dpdfile, sep = " ")
-                   assign(varname, fread(predpdfile, header=FALSE))}
+                   assign(varname, fread(dpdfile, header=FALSE))}
 
-for(i in dpdiafiles){dpdnameroot <- i %>% tolower() %>% str_extract(regex(".*(?=\\.txt$)"))
+for(i in dpdiafiles){dpdnameroot <- i %>% tolower() %>% str_extract(regex(".*(?=\\.txt.utf8.ws1$)"))
                    varname <- paste0("dpd_", dpdnameroot)
                    dpdiafile <- paste0("../data/dpd/", i)
-                   predpdiafile <- paste("iconv -f ISO-8859-1 -t UTF-8", dpdiafile, sep = " ")
-                   assign(varname, fread(predpdiafile, header=FALSE))}
+                   assign(varname, fread(dpdiafile, header=FALSE))}
+
+for(i in dpdapfiles){dpdnameroot <- i %>% tolower() %>% str_extract(regex(".*(?=\\.txt.utf8.ws1$)"))
+                     varname <- paste0("dpd_", dpdnameroot)
+                     dpdapfile <- paste0("../data/dpd/", i)
+                     assign(varname, fread(dpdapfile, header=FALSE))
+                     }
 
 #Variable names
 dpdtables <- sort(ls(pattern = "dpd_"))
-dpdtables <- dpdtables[!grepl("_ia", dpdtables)]
+dpdtables <- dpdtables[!grepl("_ia|_ap", dpdtables)]
 dpdvarorder <- sort(names(dpdvar))[c(2:4,1,5:11)]
 mapply(function(x, y) setnames(get(x), dpdvar[[y]]), dpdtables, dpdvarorder)
 mapply(function(x, y) setnames(get(paste0(x, "_ia")), dpdvar[[y]]), dpdtables, dpdvarorder)
+mapply(function(x, y) setnames(get(paste0(x, "_ap")), dpdvar[[y]]), dpdtables, dpdvarorder)
 
 # Clean up transients
 rm(list = c("dpdcoverlink", 

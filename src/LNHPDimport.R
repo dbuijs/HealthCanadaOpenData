@@ -47,7 +47,7 @@ for(i in lnhpdtablenames){lnhpdcss <- paste0("table:contains('", i, "')")
                                                   html_nodes("td:nth-child(1)") %>% 
                                                   html_text()}
 
-lnhpdfiles <- list.files("../data/lnhpd", pattern = ".*txt")
+lnhpdfiles <- list.files("../data/lnhpd", pattern = ".*txt$")
 
 for(i in lnhpdfiles){varname <- i %>% tolower() %>% str_extract(regex(".*(?=\\.txt$)"))
                    lnhpdfilepath <- paste0("../data/lnhpd/", i)

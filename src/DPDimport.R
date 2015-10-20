@@ -92,6 +92,17 @@ mapply(function(x, y) setnames(get(x), dpdvar[[y]]), dpdtables, dpdvarorder)
 mapply(function(x, y) setnames(get(paste0(x, "_ia")), dpdvar[[y]]), dpdtables, dpdvarorder)
 mapply(function(x, y) setnames(get(paste0(x, "_ap")), dpdvar[[y]]), dpdtables, dpdvarorder)
 
+#Join them all together
+dpdpattern <- ls(pattern = "dpd_") %>% str_extract(regex("(?<=^dpd_)\\w*(?=_)")) %>% unique() %>% .[!is.na(.)]
+for(i in dpdpattern){
+  a <- paste0("dpd_", i)
+  b <- paste0("dpd_", i, "_ia")
+  c <- paste0("dpd_", i, "_ap")
+  all <- paste0("dpd_", i, "_all")
+  assign(all, bind_rows(list(active = get(a), inactive = get(b), approved = get(c)), .id = "status"))
+  print(paste("Assigned", all))
+}
+
 # Clean up transients
 rm(list = c("dpdcoverlink", 
             "dpdurl", 

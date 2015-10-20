@@ -99,9 +99,17 @@ for(i in dpdpattern){
   b <- paste0("dpd_", i, "_ia")
   c <- paste0("dpd_", i, "_ap")
   all <- paste0("dpd_", i, "_all")
-  assign(all, bind_rows(list(active = get(a), inactive = get(b), approved = get(c)), .id = "status"))
+  assign(all, bind_rows(list(active = get(a), inactive = get(b), approved = get(c)), .id = "extract"))
   print(paste("Assigned", all))
 }
+
+#Uncomment the following to write all dpd_*_all tables to an SQLite file
+
+#library(RSQLite)
+#con <- dbConnect(SQLite(), "dpdOCt2015.sqlite")
+#dpdalldf <- ls(pattern = "dpd_.*_all")
+#sapply(dpdalldf, function(x){dbWriteTable(con, x, as.data.frame(get(x)))})
+#dbDisconnect(con)
 
 # Clean up transients
 rm(list = c("dpdcoverlink", 

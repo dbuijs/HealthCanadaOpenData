@@ -91,6 +91,15 @@ cv_reports %<>%
                                      paste(subtract((year(newdate)), 100), format(newdate, "%m-%d"), sep = "-"),
                                      as.character(newdate))) %>%
   select(-newdate)
+
+#Set keys for fast joins
+setkey(cv_drug_product_ingredients)
+setkey(cv_reactions, REPORT_ID, SOC_NAME_ENG, PT_NAME_ENG)
+setkey(cv_report_drug, REPORT_ID, DRUG_PRODUCT_ID)
+setkey(cv_report_drug_indication, REPORT_ID, DRUG_PRODUCT_ID)
+setkey(cv_report_links, REPORT_ID, REPORT_LINK_NO)
+setkey(cv_reports, REPORT_ID, DATRECEIVEDyyyy, DATINTRECEIVEDyyyy)
+
  
 # Clean up transients
 rm(list = c("cvfilepath", 

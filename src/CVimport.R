@@ -26,7 +26,7 @@ cvextractdate <- html_session(cvlanding) %>%
 
 if(!(file.exists("../data/cv"))) dir.create("../data/cv")
 download.file(cvzipurl, "../data/cv/cvextract.zip")
-unzip("../data/cv/cvextract.zip", exdir = "../data/cv")
+unzip("../data/cv/cvextract.zip", exdir = "../data/cv", junkpaths = TRUE)
 
 # CV Variable Names
 # Grab the readme page

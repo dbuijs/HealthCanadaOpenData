@@ -99,7 +99,7 @@ for(i in dpdpattern){
   b <- paste0("dpd_", i, "_ia")
   c <- paste0("dpd_", i, "_ap")
   all <- paste0("dpd_", i, "_all")
-  assign(all, bind_rows(list(active = get(a), inactive = get(b), approved = get(c)), .id = "extract"))
+  assign(all, bind_rows(list(active = get(a), inactive = get(b), approved = get(c)), .id = "extract") %>% as.data.table())
   print(paste("Assigned", all))
 }
 
@@ -112,7 +112,18 @@ for(i in dpdpattern){
 #dbDisconnect(con)
 
 # Clean up transients
-rm(list = c("dpdcoverlink", 
+rm(list = c("a",
+            "b",
+            "c",
+            "all",
+            "dpdapfile",
+            "dpdapfiles",
+            "dpdapurl",
+            "dpdiafile",
+            "dpdiafiles",
+            "dpdiaurl",
+            "dpdpattern",
+            "dpdcoverlink", 
             "dpdurl", 
             "dpdvar", 
             "dpdtablenames", 

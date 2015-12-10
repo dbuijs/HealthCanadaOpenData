@@ -8,6 +8,7 @@ library(stringr)
 library(magrittr)
 library(dplyr)
 library(data.table)
+library(purrr)
 
 cvzipurl <- "http://www.hc-sc.gc.ca/dhp-mps/alt_formats/zip/medeff/databasdon/extract_extrait.zip"
 cvlanding <- "http://www.hc-sc.gc.ca/dhp-mps/medeff/databasdon/extract_extrait-eng.php"
@@ -81,6 +82,7 @@ mapply(function(x, y) setnames(get(x), cvvar[[y]]), cvtables, cvvarorder)
 
 #Add 4-digit years. R assumes that 2-digits years are 00-68 = 2000-2068 and 69-99 = 1969-1999
 #The following code fixes this by adding new columns with 4 digit years
+#Original columns are preserved, new columns added with the dates in character and POSIX format
 cv_reports %<>%
   mutate(newdate = dmy(DATRECEIVED),
          DATRECEIVEDyyyy = ifelse(year(newdate) > 2015,
@@ -90,7 +92,59 @@ cv_reports %<>%
          DATINTRECEIVEDyyyy = ifelse(year(newdate) > 2015,
                                      paste(subtract((year(newdate)), 100), format(newdate, "%m-%d"), sep = "-"),
                                      as.character(newdate))) %>%
-  select(-newdate)
+  select(-newdate) %>%
+  rename(DATRECEIVED_CHAR = DATRECEIVEDyyyy,
+         DATINTRECEIVED_CHAR = DATINTRECEIVEDyyyy) %>%
+  mutate(DATRECEIVED_CLEAN = ymd(DATRECEIVED_CHAR),
+         DATINTRECEIVED_CLEAN = ymd(DATINTRECEIVED_CHAR))
+
+#Recode Age Groups. Original Columns are preserved. New columns added.
+#Decade 1: Adolescent
+#Decade 6: Elderly
+#Unknown: Age > 130 Years
+#Elderly: 65 Years <= Age < 130 Years
+#Adult: 18 Years <= Age < 65 Years
+#Adolescent: 12 Years <= Age < 18 Years
+#Child: 2 Years < Age <= 12 Years
+#Infant: 28 Days <= Age <= 2 Years
+#Neonate: Age <= 28 Days
+
+age_groups <- c("Adult", 
+                "Elderly", 
+                "Neonate", 
+                "Child", 
+                "Infant", 
+                "Adolescent")
+
+cv_reports %<>%
+  mutate(calcyear = NA,
+         calcyear = ifelse(AGE_UNIT_ENG == "Years", AGE_Y, calcyear),
+         calcyear = ifelse(AGE_UNIT_ENG == "Decade", AGE_Y * 10 + 5, calcyear),
+         calcyear = ifelse(AGE_UNIT_ENG == "Months", AGE_Y/12, calcyear),
+         calcyear = ifelse(AGE_UNIT_ENG == "Weeks", AGE_Y/52, calcyear),
+         calcyear = ifelse(AGE_UNIT_ENG == "Days", AGE_Y/365, calcyear),
+         AGE_GROUP_CLEAN = "Unknown",
+         AGE_GROUP_CLEAN = ifelse(AGE_GROUP_ENG %in% age_groups, 
+                                  AGE_GROUP_ENG, 
+                                  AGE_GROUP_CLEAN),
+         AGE_GROUP_CLEAN = ifelse(!is.na(calcyear) & calcyear > 130,
+                                  "Unknown", AGE_GROUP_CLEAN),
+         AGE_GROUP_CLEAN = ifelse(!is.na(calcyear) & calcyear >= 65 & calcyear <= 130,
+                       "Elderly", AGE_GROUP_CLEAN),
+         AGE_GROUP_CLEAN = ifelse(!is.na(calcyear) & calcyear >= 18 & calcyear < 65,
+                                  "Adult", AGE_GROUP_CLEAN),
+         AGE_GROUP_CLEAN = ifelse(!is.na(calcyear) & calcyear >= 12 & calcyear < 18,
+                                  "Adolescent", AGE_GROUP_CLEAN),
+         AGE_GROUP_CLEAN = ifelse(!is.na(calcyear) & calcyear > 2 & calcyear < 12,
+                                  "Child", AGE_GROUP_CLEAN),
+         AGE_GROUP_CLEAN = ifelse(!is.na(calcyear) & calcyear >= 0.2 & calcyear <= 2,
+                                  "Infant", AGE_GROUP_CLEAN),
+         AGE_GROUP_CLEAN = ifelse(!is.na(calcyear) & calcyear < 28/365,
+                                  "Neonate", AGE_GROUP_CLEAN),
+         AGE_GROUP_CLEAN = ifelse(AGE_UNIT_ENG %in% c("Hours", "Minutes"),
+                                  "Neonate", AGE_GROUP_CLEAN),
+         AGE_GROUP_CLEAN = ifelse(is.na(AGE_GROUP_CLEAN), "Unknown", AGE_GROUP_CLEAN)) %>%
+  select(-calcyear)
 
 #Set keys for fast joins
 setkey(cv_drug_product_ingredients)
@@ -98,11 +152,12 @@ setkey(cv_reactions, REPORT_ID, SOC_NAME_ENG, PT_NAME_ENG)
 setkey(cv_report_drug, REPORT_ID, DRUG_PRODUCT_ID)
 setkey(cv_report_drug_indication, REPORT_ID, DRUG_PRODUCT_ID)
 setkey(cv_report_links, REPORT_ID, REPORT_LINK_NO)
-setkey(cv_reports, REPORT_ID, DATRECEIVEDyyyy, DATINTRECEIVEDyyyy)
+setkey(cv_reports, REPORT_ID, DATRECEIVED_CLEAN, DATINTRECEIVED_CLEAN)
 
  
 # Clean up transients
-rm(list = c("cvfilepath", 
+rm(list = c("age_groups",
+            "cvfilepath", 
             "cvfiles", 
             "cvlanding", 
             "cvname", 
